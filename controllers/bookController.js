@@ -1,6 +1,6 @@
 const bookModel = require("../models/bookModel")
 const Validation = require("../validators/validator")
-const { isValidObjectId } = require("mongoose")
+const mongoose = require('mongoose');
 
 
 // Add Book 
@@ -8,29 +8,53 @@ const { isValidObjectId } = require("mongoose")
 const createBook = async function (req, res) {
 
     try {
-        const data = req.body
-        if (Object.keys(data) == 0) return res.status(400).send({ status: false, message: "No input provided" });
-        const { title, authorId, summary } = data
+        const data = req.body;
 
-        if (!authorId) return res.status(400).send({ status: false, message: "Please enter authorId" })
-        if (!isValidObjectId(authorId)) return res.status(400).send({ status: false, message: "Author Id is not valid" })
-         if (authorId != req.decodedToken.authorId) return res.status(403).send({ status: false, message: "you do not have authorization to this " });
+        if (Object.keys(data).length === 0) {
+            return res.status(400).send({ status: false, message: "No input provided" });
+        }
 
-        //  -------------------------------Title Validation-----------------------
-        if (!title) return res.status(400).send({ status: false, message: "Please Enter Title" })
-        if (!Validation.isValid(title)) return res.status(400).send({ status: false, message: "please inter valid title" })
-        let findTitle = await bookModel.findOne({ title: title })
-        if (findTitle) return res.status(400).send({ status: false, message: "Book allrady exist for this title " })
+        const { title, authorId, summary } = data;
 
-        if (!summary) return res.status(400).send({ status: false, message: "Write about Summary for this Book" })
+        if (!authorId) {
+            return res.status(400).send({ status: false, message: "Please enter authorId" });
+        }
 
+        if (!mongoose.Types.ObjectId.isValid(authorId)) {
+            return res.status(400).send({ status: false, message: "Author Id is not valid" });
+        }
 
-        const bookData = await bookModel.create(data)
-       return res.status(201).send({ status: true, message: "Book Created Successful", data: bookData })
+        if (req.decodedToken && req.decodedToken.authorId && authorId != req.decodedToken.authorId) {
+            return res.status(403).send({ status: false, message: "You do not have authorization for this" });
+        }
+
+        // Title Validation
+        if (!title) {
+            return res.status(400).send({ status: false, message: "Please Enter Title" });
+        }
+
+        // Assuming Validation.isValid(title) is a custom validation function
+        if (!Validation.isValid(title)) {
+            return res.status(400).send({ status: false, message: "Please enter a valid title" });
+        }
+
+        let findTitle = await bookModel.findOne({ title: title });
+        if (findTitle) {
+            return res.status(400).send({ status: false, message: "A book already exists with this title" });
+        }
+
+        if (!summary) {
+            return res.status(400).send({ status: false, message: "Write about Summary for this Book" });
+        }
+
+        const bookData = await bookModel.create(data);
+
+        return res.status(201).send({ status: true, message: "Book Created Successfully", data: bookData });
+    } catch (err) {
+        res.status(500).send({ status: false, message: err.message });
     }
-    catch (err) {
-        res.status(500).send({ status: false, message: err.message })
-    }};
+};
+
 
 
 // View a List of all Books
@@ -51,7 +75,6 @@ const viewBookById = async function (req, res) {
     try {
         const bookId = req.params.bookId
         if (!bookId) return res.status(400).send({ status: false, error: "please inter book Id" })
-        if (!isValidObjectId(bookId)) return res.status(400).send({ status: false, message: "Enter a valid bookId" })
 
         const books = await bookModel.findById({ _id: bookId }).sort({ _id: -1 })
         if (!books) return res.status(400).send({ status: false, error: "There is no such book exist" })
@@ -66,29 +89,30 @@ const viewBookById = async function (req, res) {
 
 const updateBooks = async function (req, res) {
     try {
-        const bookId = req.params.bookId
-        const data = req.body
-        const { title, summary } = req.body
-        if (Object.keys(data).length == 0) return res.status(400).send({ status: false, message: "Add fields to update" });
-
-        if (title) {
-            if (!Validation.isValid(title)) return res.status(400).send({ status: false, message: "please inter valid title" })
-            let findTitle = await bookModel.findOne({ title: title })
-            if (findTitle) return res.status(400).send({ status: false, message: "Book all ready exist for this title " })
+        const bookId = req.params.bookId;
+        const data = req.body;
+        const { title, summary } = req.body;
+        if (Object.keys(data).length === 0) {
+            return res.status(400).send({ status: false, message: "Add fields to update" });
         }
-        if (summary) {
-            if (!summary){
-                return res.status(400).send({ status: false, message: "please Enter the Summary" })
-            }}
+            let findTitle = await bookModel.findOne({ title: title });
+            if (findTitle) {
+                return res.status(400).send({ status: false, message: "Book already exists for this title" });
+            }
 
-        let updatedData = await bookModel.findOneAndUpdate({ _id: bookId }, {
-            $set: { title: title, summary: summary}
-        }, { new: true, upsert: true })
+        if (summary && !summary) {
+            return res.status(400).send({ status: false, message: "Please enter the Summary" });
+        }
 
-        return res.status(200).send({ status: true, message: "Book updated successfully", data: updatedData })
-    }
-    catch (error) {
-        return res.status(500).send({ status: false, message: error.message })
+        let updatedData = await bookModel.findOneAndUpdate(
+            { _id: bookId },
+            { $set: { title: title, summary: summary } },
+            { new: true, upsert: true }
+        );
+
+        return res.status(200).send({ status: true, message: "Book updated successfully", data: updatedData });
+    } catch (error) {
+        return res.status(500).send({ status: false, message: error.message });
     }
 }
 
