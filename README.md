@@ -11,8 +11,8 @@ Book
 4 = Update book using authentication and Authorization 
 5 = Delete book using authentication and Authorization 
 
-Github Link = 
+Github Link = https://github.com/Anilg1996/Managing-Books
 
-Deploy Link = 
+Deploy Link = https://managing-books.onrender.com
 
 Thank You
